@@ -7,12 +7,17 @@ import (
 	"github.com/landrunner/todo/models"
 )
 
-var todos = []models.Todo{
-	{ID: 1, Title: "Learn go", Status: "assinged"},
-	{ID: 2, Title: "Make Tod", Status: "assinged"},
-}
-
 func ShowIndexPage(c *gin.Context) {
+	val, _ := c.Get("db")
+	db, ok := val.(models.DataSource)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB Connection is broken"})
+	}
+
+	todos, err := db.FetchTodos()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB Connection is broken"})
+	}
 	c.HTML(http.StatusOK, "index.html", todos)
 }
 
@@ -26,11 +31,13 @@ func CreateTodoHTML(c *gin.Context) {
 		c.HTML(http.StatusBadRequest, "create.html", gin.H{"error": err.Error()})
 		return
 	}
-	newTodo.ID = uint(len(todos) + 1)
-	todos = append(todos, newTodo)
-	c.Redirect(http.StatusFound, "/")
-}
 
-func GetTodos(c *gin.Context) {
-	c.JSON(http.StatusOK, todos)
+	val, _ := c.Get("db")
+	db, ok := val.(models.DataSource)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB Connection is broken"})
+	}
+
+	_ = db.AddTodo(newTodo)
+	c.Redirect(http.StatusFound, "/")
 }
